@@ -1,17 +1,32 @@
 ﻿if(!window.playit)
     window.playit = { player: {}, fx: {}, defaults : {} };
 
-playit.state = function (options) {
- 
-    this.config = options || {};
-    this.element = options.element;
+playit.ids = 100;
+playit.state = function (player, element , type) {
+    this.player = player;
+    var el = $(element);
 
-    this.content = options.content || "generic";
-    this.type = options.type || "focusIn";
-   
-    this.player = options.player;
+    //auto attribute an id to the html element and state if needed.
+    if (!el.attr("id")) el.attr("id", "el" + (playit.ids++));
+    
+    var meta = el.data("playit");
+    
+    var p = el.parents("[data-playit]");    
+    
+    this.id = el.attr("id");
+    
+    this.element = el;
+    this.parent =  p.length == 0 ? player : player.itemsById[p.attr('id')];
+    
+    this.content = meta.type || "generic";
+    this.type = type || "focusIn";
+    
+    this.items = [];
+    
     this.nextState = null;
     this.prevState = null;
+    this.markers = {};
+    this.order = 0;
 
     this.transitions = {
         forward : playit.fx.show,
@@ -35,10 +50,17 @@ playit.state = function (options) {
 
 };
 
+playit.state.prototype.addMarker = function(id, options) {
+    var r = new playit.marker(this, id, options);
+    this.markers[id] = r;
+    this.player.registerMarker(r, this);
+};
+
 playit.state.prototype.forward = function () {
     var self = this;
     if (!self.transitions.forward) {
         self.events.endForward.fire(self);
+        self.player.currentState = self.nextState;
         return null;
     };
 
@@ -47,6 +69,7 @@ playit.state.prototype.forward = function () {
     t.deferred().done(function () {
         self.currentFx = null;
         self.events.endForward.fire(self);
+        self.player.currentState = self.nextState;
     });
     t.start();
     return t.deferred();
@@ -93,3 +116,13 @@ playit.state.prototype.on = function (eventName, callback) {
 playit.state.prototype.getCallbacks = function (eventName) {
     return this.events[eventName];
 };
+
+
+
+playit.marker = function(state, id, options) {
+    options = options || {};
+    this.player = state.player;
+    this.state = state;
+    this.id = id;
+    this.name = options.name || id;
+}

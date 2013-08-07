@@ -18,7 +18,6 @@ playit.defaults.slide =
     }
 };
 
-
 playit.defaults.list = playit.defaults.text = playit.defaults.image = playit.defaults.generic = 
 {
     focusIn: {
@@ -36,11 +35,13 @@ playit.defaults.list = playit.defaults.text = playit.defaults.image = playit.def
 };
 
 playit.defaults.configurator = function (state) {
-    state.on("endForward", function (s) {
-        if (s.nextState) {
-            s.nextState.forward();
-        }
-    });
+    if (state.type == "focusOut") {
+        state.on("endForward", function(s) {
+            if (s.nextState) {
+                s.nextState.forward();
+            }
+        });
+    }
 
     if (state.type == "focusIn") {
         state.on("init", function (s) {

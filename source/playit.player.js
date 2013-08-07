@@ -1,11 +1,9 @@
 ﻿if (!window.playit)
     window.playit = { player: {}, fx: {}, defaults: {} };
 
-
 ; (function ($, window, document, undefined) {
-    var ids = 100;
+   
     
-    // The actual plugin constructor
     function player(element, options) {
         options = options || {};
         this.element = element;
@@ -14,15 +12,16 @@
         this.options = $.extend({}, this.metada, options);
         
         this.configurator = options.configurator || playit.defaults.configurator || function (){};
-
+        this.markers = {};
         this._name = pluginName;
         this.items = [];
         this.itemsById = {};
         this.init();
-        
-        this.items[0].forward();
+
+        this.currentState = this.items[0];
     }
 
+  
     player.prototype = {
         init: function() {
             var me = $(this.element);
@@ -31,38 +30,37 @@
             this.itemsById[this.id] = this;
 
             me.find("[data-playit]").each(function() {
-                self.initState($(this));
+                var state = self.createState($(this));
+                self.itemsById[state.id] = state;
+                self.items.push(state);
             });
-            this.initStates();
-
-            //this.items[0].next();
-
+            this.initAllStates();
         },
 
-        initState : function(element) {
+        forward : function() {
+            if (this.running) return;
             var self = this;
-            var el = $(element);
-            if (!el.attr("id")) el.attr("id", "el" + (ids++));
-            var meta = el.data("playit");
-            var p = el.parents("[data-playit]");
-            var state = new playit.state({
-                element: el,
-                player: self,
-                content: meta.type,
-                stateType: "in"
-            });
-            state.parent = p.length == 0 ? state.player : state.player.itemsById[p.attr('id')];
-            state.id = el.attr("id");
-            state.items = [];
-            //self.initState(state);
-            self.itemsById[el.attr("id")] = state;
-            self.items.push(state);
-
+            var promise = this.currentState.forward();
+          
+            if (promise != null) {
+                this.running = true;
+                promise.done(function() {
+                    self.running = false;
+                });
+            }
         },
 
-        initStates: function() {
+        createState : function(element) {
+            var state = new playit.state(this, element, "focusIn"); 
+            return state;
+        },
+
+        registerMarker : function(marker) {
+            this.markers[market.id] = marker;
+        },
+
+        initAllStates: function() {
             var self = this;
-            
             var tmp = this.items.groupBy("el=>el.parent.id");
             var i;
             
@@ -86,7 +84,11 @@
             for (i = 0; i < this.items.length; i++) {
                 var state = self.items[i];
                 this.configurator(state);
+                state.order = i;
+                
+
                 state.init();
+                
                 if (i > 0) {
                     state.prevState = self.items[i - 1];
                 }
@@ -97,15 +99,9 @@
 
             }
         },
-
+        
         _createOutState : function(state) {
-              var s =  new playit.state({
-                    type : "focusOut",
-                    element:state.element,
-                    player: self,
-                    parent : state.parent,
-                    content: state.content
-                });
+            var s = new playit.state(this, state.element, "focusOut"); 
             s.id = "out" + state.id;
             this.itemsById[s.id] = s;
             return s;

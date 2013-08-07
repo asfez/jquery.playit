@@ -26,12 +26,12 @@ playit.fx.show = function (state) {
     this.transition = $.Deferred();
     this.state = state;
 };
+
 playit.fx.show.prototype = {
     start: function () {
         console.log("show:" + this.state.id);
         var  self = this;
         if (this.state.element) $(this.state.element).css("display", "block");
-
 
         this.transition.resolve();
     },
@@ -47,16 +47,20 @@ playit.fx.tween = function (state) {
     this.transition = $.Deferred();
     this.state = state;
 };
+
 playit.fx.tween.prototype = {
     start: function () {
         console.log("show:" + this.state.id);
         var self = this;
         $(this.state.element).css("display", "block");
-        TweenLite.to($(this.state.element), 1.5, { width: 100 });
-        setTimeout(function () {
-            self.transition.resolve();
-        }, 2000);
-        
+        $(this.state.element).css("margin-left", "-500px");
+        TweenLite.to($(this.state.element), 0.5, {
+            "margin-left": 0, onComplete: function () {
+                self.transition.resolve();
+            } 
+        });
+
+
     },
 
     deferred: function () {
@@ -114,3 +118,30 @@ playit.fx.fadeIn.prototype = {
 };
 
 
+/*------------------------------------------------------
+-   Fadein
+-------------------------------------------------------*/
+playit.fx.fadeOut = function (state) {
+    this.transition = $.Deferred();
+    this.state = state;
+};
+
+
+
+playit.fx.fadeOut.prototype = {
+    start: function () {
+        console.log("fadeout:" + this.state.id);
+        var self = this;
+        if (!this.state.element) {
+            this.transition.resolve();
+            return;
+        }
+        this.state.element.fadeOut(500).promise().done(function () {
+            self.transition.resolve();
+        });
+    },
+
+    deferred: function () {
+        return this.transition.promise();
+    }
+};
