@@ -14,11 +14,11 @@
         this.configurator = options.configurator || playit.defaults.configurator || function (){};
         this.markers = {};
         this._name = pluginName;
-        this.items = [];
-        this.itemsById = {};
+        this.states = [];
+        this.statesById = {};
         this.init();
 
-        this.currentState = this.items[0];
+        this.currentState = this.states[0];
     }
 
   
@@ -27,18 +27,18 @@
             var me = $(this.element);
             var self = this;
             
-            this.itemsById[this.id] = this;
+            this.statesById[this.id] = this;
 
             me.find("[data-playit]").each(function() {
                 var state = self.createState($(this));
-                self.itemsById[state.id] = state;
-                self.items.push(state);
+                self.statesById[state.id] = state;
+                self.states.push(state);
             });
             this.initAllStates();
         },
 
         forward : function() {
-            if (this.running) return;
+            if (this.running) return null;
             var self = this;
             var promise = this.currentState.forward();
           
@@ -48,7 +48,65 @@
                     self.running = false;
                 });
             }
+            return promise;
         },
+        
+
+        backward : function() {
+            if (this.running) return null;
+            var self = this;
+            var promise = this.currentState.backward();
+          
+            if (promise != null) {
+                this.running = true;
+                promise.done(function() {
+                    self.running = false;
+                });
+            }
+            return promise;
+        },
+        
+
+         flyTo : function(markerId) {
+             var self = this;
+             var marker = this.markers[markerId];
+             
+             if (!marker || this.running || this.currentState == marker.state) return null;
+
+             this.running = true;
+
+             var flyChain = [];
+             var o1 = this.currentState.order;
+             var o2 = marker.state.order;
+             for (var i = o1; (o1 < o2) ? (i < o2) : (i > o2); (o1 < o2) ? (i++) : (i--)) {
+                 flyChain.push(this.states[i]);
+             }
+
+             var direction = o1 < o2 ? "flyForward" : "flyBackward";
+             var deferred = $.Deferred();
+             var processFlyChain = function() {
+                 if (flyChain.length == 0) {
+                     self.running = false;
+                     deferred.resolve();
+                     return;
+                 }
+                 var s = flyChain[0];
+                 var promise = s[direction]();
+                 if (!promise) {
+                     flyChain.shift();
+                     processFlyChain();
+                     return;
+                 }
+                 promise.done(function() {
+                     flyChain.shift();
+                     processFlyChain();
+                 });
+             };
+
+             processFlyChain();
+             return deferred.promise();
+         },
+
 
         createState : function(element) {
             var state = new playit.state(this, element, "focusIn"); 
@@ -56,16 +114,16 @@
         },
 
         registerMarker : function(marker) {
-            this.markers[market.id] = marker;
+            this.markers[marker.id] = marker;
         },
 
         initAllStates: function() {
             var self = this;
-            var tmp = this.items.groupBy("el=>el.parent.id");
+            var tmp = this.states.groupBy("el=>el.parent.id");
             var i;
             
             for (i = 0; i < tmp.length; i++) {
-                var parent = this.itemsById[tmp[i].key];
+                var parent = this.statesById[tmp[i].key];
                 for(var j = 0 ; j < tmp[i].items.length ; j++)
                 {
                     var el = tmp[i].items[j];
@@ -74,26 +132,25 @@
                 }
             }
             
-            tmp = this.items.where("el=>el.parent == value", this);
-            self.items = [];
+            tmp = this.states.where("el=>el.parent == value", this);
+            self.states = [];
 
             for (i = 0; i < tmp.length; i++) {
                 this.exploreState(tmp[i]);
             }
 
-            for (i = 0; i < this.items.length; i++) {
-                var state = self.items[i];
+            for (i = 0; i < this.states.length; i++) {
+                var state = self.states[i];
                 this.configurator(state);
                 state.order = i;
-                
 
                 state.init();
                 
                 if (i > 0) {
-                    state.prevState = self.items[i - 1];
+                    state.prevState = self.states[i - 1];
                 }
-                if (i < self.items.length - 1) {
-                    state.nextState = self.items[i + 1];
+                if (i < self.states.length - 1) {
+                    state.nextState = self.states[i + 1];
                 }
                 console.log(state.id + " " + state.type);
 
@@ -103,16 +160,16 @@
         _createOutState : function(state) {
             var s = new playit.state(this, state.element, "focusOut"); 
             s.id = "out" + state.id;
-            this.itemsById[s.id] = s;
+            this.statesById[s.id] = s;
             return s;
         },
         
         exploreState : function(state) {
-            this.items.push(state);
+            this.states.push(state);
             for (var i = 0; i < state.items.length; i++) {
                 this.exploreState(state.items[i]);
             }
-            this.items.push(this._createOutState(state));
+            this.states.push(this._createOutState(state));
         }
 
 

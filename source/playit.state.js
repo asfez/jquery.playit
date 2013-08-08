@@ -16,7 +16,7 @@ playit.state = function (player, element , type) {
     this.id = el.attr("id");
     
     this.element = el;
-    this.parent =  p.length == 0 ? player : player.itemsById[p.attr('id')];
+    this.parent =  p.length == 0 ? player : player.statesById[p.attr('id')];
     
     this.content = meta.type || "generic";
     this.type = type || "focusIn";
@@ -42,10 +42,13 @@ playit.state = function (player, element , type) {
         flyForward: new $.Callbacks(),
         endFlyForward: new $.Callbacks(),
         backward: new $.Callbacks(),
-        endbackward: new $.Callbacks(),
+        endBackward: new $.Callbacks(),
         flyBackward: new $.Callbacks(),
-        endFlyBackward: new $.Callbacks(),
+        endFlyBackward: new $.Callbacks()
     };
+
+
+    if (meta.marker) this.addMarker(meta.marker, {});
 
 
 };
@@ -75,12 +78,31 @@ playit.state.prototype.forward = function () {
     return t.deferred();
 };
 
+playit.state.prototype.flyForward = function () {
+    var self = this;
+    if (!self.transitions.flyForward) {
+        self.events.endFlyForward.fire(self);
+        self.player.currentState = self.nextState;
+        return null;
+    };
+
+    var t = new self.transitions.flyForward(self);
+    self.currentFx = t;
+    t.deferred().done(function () {
+        self.currentFx = null;
+        self.events.endFlyForward.fire(self);
+        self.player.currentState = self.nextState;
+    });
+    t.start();
+    return t.deferred();
+};
+
 
 playit.state.prototype.backward = function () {
-    var self = this;
-
+   var self = this;
     if (!self.transitions.backward) {
         self.events.endBackward.fire(self);
+        self.player.currentState = self.prevState;
         return null;
     };
 
@@ -89,11 +111,31 @@ playit.state.prototype.backward = function () {
     t.deferred().done(function () {
         self.currentFx = null;
         self.events.endBackward.fire(self);
+        self.player.currentState = self.prevState;
     });
     t.start();
     return t.deferred();
 };
 
+
+playit.state.prototype.flyBackward = function () {
+    var self = this;
+    if (!self.transitions.flyBackward) {
+        self.events.endFlyBackward.fire(self);
+        self.player.currentState = self.prevState;
+        return null;
+    };
+
+    var t = new self.transitions.flyBackward(self);
+    self.currentFx = t;
+    t.deferred().done(function () {
+        self.currentFx = null;
+        self.events.endFlyBackward.fire(self);
+        self.player.currentState = self.prevState;
+    });
+    t.start();
+    return t.deferred();
+};
 
 playit.state.prototype.open = function () {
     this.events.open.fire(this);

@@ -21,7 +21,7 @@ playit.defaults.slide =
 playit.defaults.list = playit.defaults.text = playit.defaults.image = playit.defaults.generic = 
 {
     focusIn: {
-        forward: playit.fx.tween,
+        forward: playit.fx.fadeIn,
         backward: playit.fx.hide,
         flyForward: playit.fx.show,
         flyBackward: playit.fx.hide
