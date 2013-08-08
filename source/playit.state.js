@@ -9,7 +9,7 @@ playit.state = function (player, element , type) {
     //auto attribute an id to the html element and state if needed.
     if (!el.attr("id")) el.attr("id", "el" + (playit.ids++));
     
-    var meta = el.data("playit");
+    var meta = el.data("playit") || {};
     
     var p = el.parents("[data-playit]");    
     
@@ -47,10 +47,7 @@ playit.state = function (player, element , type) {
         endFlyBackward: new $.Callbacks()
     };
 
-
     if (meta.marker) this.addMarker(meta.marker, {});
-
-
 };
 
 playit.state.prototype.addMarker = function(id, options) {
@@ -63,7 +60,8 @@ playit.state.prototype.forward = function () {
     var self = this;
     if (!self.transitions.forward) {
         self.events.endForward.fire(self);
-        self.player.currentState = self.nextState;
+        if(self.nextState)
+            self.player.currentState = self.nextState;
         return null;
     };
 
@@ -72,7 +70,8 @@ playit.state.prototype.forward = function () {
     t.deferred().done(function () {
         self.currentFx = null;
         self.events.endForward.fire(self);
-        self.player.currentState = self.nextState;
+        if(self.nextState)
+            self.player.currentState = self.nextState;
     });
     t.start();
     return t.deferred();
@@ -82,7 +81,8 @@ playit.state.prototype.flyForward = function () {
     var self = this;
     if (!self.transitions.flyForward) {
         self.events.endFlyForward.fire(self);
-        self.player.currentState = self.nextState;
+        if(self.nextState)
+            self.player.currentState = self.nextState;
         return null;
     };
 
@@ -91,7 +91,8 @@ playit.state.prototype.flyForward = function () {
     t.deferred().done(function () {
         self.currentFx = null;
         self.events.endFlyForward.fire(self);
-        self.player.currentState = self.nextState;
+        if(self.nextState)
+            self.player.currentState = self.nextState;
     });
     t.start();
     return t.deferred();
@@ -102,7 +103,8 @@ playit.state.prototype.backward = function () {
    var self = this;
     if (!self.transitions.backward) {
         self.events.endBackward.fire(self);
-        self.player.currentState = self.prevState;
+        if(self.prevState)
+            self.player.currentState = self.prevState;
         return null;
     };
 
@@ -111,7 +113,8 @@ playit.state.prototype.backward = function () {
     t.deferred().done(function () {
         self.currentFx = null;
         self.events.endBackward.fire(self);
-        self.player.currentState = self.prevState;
+        if(self.prevState)
+            self.player.currentState = self.prevState;
     });
     t.start();
     return t.deferred();
@@ -122,7 +125,8 @@ playit.state.prototype.flyBackward = function () {
     var self = this;
     if (!self.transitions.flyBackward) {
         self.events.endFlyBackward.fire(self);
-        self.player.currentState = self.prevState;
+        if(self.prevState)
+            self.player.currentState = self.prevState;
         return null;
     };
 
@@ -131,8 +135,9 @@ playit.state.prototype.flyBackward = function () {
     t.deferred().done(function () {
         self.currentFx = null;
         self.events.endFlyBackward.fire(self);
-        self.player.currentState = self.prevState;
-    });
+        if(self.prevState)
+            self.player.currentState = self.prevState;
+    }); 
     t.start();
     return t.deferred();
 };
@@ -158,8 +163,6 @@ playit.state.prototype.on = function (eventName, callback) {
 playit.state.prototype.getCallbacks = function (eventName) {
     return this.events[eventName];
 };
-
-
 
 playit.marker = function(state, id, options) {
     options = options || {};

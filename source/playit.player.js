@@ -7,10 +7,10 @@
     function player(element, options) {
         options = options || {};
         this.element = element;
-        this.metada = $(element).data("playit");
+        this.metada = $(element).data("playit") || {};
         this.id = $(element).attr("id");
         this.options = $.extend({}, this.metada, options);
-        
+        this.selector = options.selector || "[data-playit]";
         this.configurator = options.configurator || playit.defaults.configurator || function (){};
         this.markers = {};
         this._name = pluginName;
@@ -23,18 +23,25 @@
 
   
     player.prototype = {
+
         init: function() {
             var me = $(this.element);
             var self = this;
             
             this.statesById[this.id] = this;
 
-            me.find("[data-playit]").each(function() {
+            me.find(this.selector).each(function() {
+                if (!$(this).attr("data-playit")) $(this).attr("data-playit", "{}");
+
                 var state = self.createState($(this));
                 self.statesById[state.id] = state;
                 self.states.push(state);
             });
             this.initAllStates();
+        },
+
+        notifyChange : function() {
+            $(this.element).trigger("change", this);
         },
 
         forward : function() {
@@ -46,23 +53,33 @@
                 this.running = true;
                 promise.done(function() {
                     self.running = false;
+                    self.notifyChange();
                 });
+            } else {
+                self.notifyChange();
             }
             return promise;
         },
         
 
         backward : function() {
-            if (this.running) return null;
+            
             var self = this;
+            if (self.running ||!self.currentState.prevState) return null;
+
+            self.currentState = self.currentState.prevState;
             var promise = this.currentState.backward();
           
             if (promise != null) {
                 this.running = true;
                 promise.done(function() {
                     self.running = false;
+                    self.notifyChange();
                 });
+            } else {
+                self.notifyChange();
             }
+            
             return promise;
         },
         
@@ -84,22 +101,32 @@
 
              var direction = o1 < o2 ? "flyForward" : "flyBackward";
              var deferred = $.Deferred();
+
+             var endProcess = function() {
+                 flyChain.shift();
+                 processFlyChain();
+             };
+
              var processFlyChain = function() {
                  if (flyChain.length == 0) {
                      self.running = false;
                      deferred.resolve();
+                     self.notifyChange();
                      return;
                  }
+                 //last step, play a simple forward
+                 if (flyChain.length == 1) {
+                     direction = "forward";
+                 }
+                 
                  var s = flyChain[0];
                  var promise = s[direction]();
                  if (!promise) {
-                     flyChain.shift();
-                     processFlyChain();
+                     endProcess();
                      return;
                  }
                  promise.done(function() {
-                     flyChain.shift();
-                     processFlyChain();
+                     endProcess();
                  });
              };
 

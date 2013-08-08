@@ -12,7 +12,7 @@ playit.defaults.slide =
     },
     focusOut: {
         forward: playit.fx.hide,
-        backward: playit.fx.fadeIn,
+        backward: playit.fx.show,
         flyForward: playit.fx.hide,
         flyBackward: playit.fx.hide
     }
@@ -28,7 +28,7 @@ playit.defaults.list = playit.defaults.text = playit.defaults.image = playit.def
     },
     focusOut: {
         forward: playit.fx.none,
-        backward: playit.fx.fadeIn,
+        backward: playit.fx.show,
         flyForward: playit.fx.none,
         flyBackward: playit.fx.show
     }
@@ -36,7 +36,7 @@ playit.defaults.list = playit.defaults.text = playit.defaults.image = playit.def
 
 playit.defaults.configurator = function (state) {
     if (state.type == "focusOut") {
-        state.on("endForward", function(s) {
+        state.on("endForward", function (s) {
             if (s.nextState) {
                 s.nextState.forward();
             }
@@ -44,12 +44,24 @@ playit.defaults.configurator = function (state) {
     }
 
     if (state.type == "focusIn") {
+        state.on("endBackward", function (s) {
+            if (s.prevState && s.prevState.type == "focusOut") {
+                s.prevState.backward();
+            }
+        });
         state.on("init", function (s) {
             s.element.css("display", "none");
         });
     }
+    var d;
+    
+    if ($(state.element).hasClass("slide")) {
+        d = playit.defaults.slide[state.type];
+    } else {
+        d = playit.defaults[state.content][state.type] || playit.defaults.generic[state.type];
+    }
 
-    var d = playit.defaults[state.content][state.type] || playit.defaults.generic[state.type];
+
 
     for (var p in d) {
         state.transitions[p] = d[p];
