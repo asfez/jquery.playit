@@ -10,7 +10,7 @@
         this.metada = $(element).data("playit") || {};
         this.id = $(element).attr("id");
         this.options = $.extend({}, this.metada, options);
-        this.selector = options.selector || "[data-playit]";
+        this.selectors = this.readSelectors(options.selectors || "[data-playit]");
         this.configurator = options.configurator || playit.defaults.configurator || function (){};
         this.markers = {};
         this._name = pluginName;
@@ -28,27 +28,52 @@
         init: function() {
             var me = $(this.element);
             var self = this;
-            
-        
+
             this.statesById[this.id] = this;
-           
 
+            var elems = [];
+            var i;
+            for (i = 0; i < self.selectors.length; i++) {
+               var s = self.selectors[i].selector;
+               me.find(s).each(function() {
+                   if (!$(this).attr("data-playit")) $(this).attr("data-playit", "{}");
+                   $(this).data("selector", self.selectors[i]);
+                   elems.push($(this));
+               });
+           }
 
-            me.find(this.selector).each(function() {
-                if (!$(this).attr("data-playit")) $(this).attr("data-playit", "{}");
-
-                var state = self.createState($(this));
+            for (i = 0; i < elems.length; i++) {
+                var el = elems[i];
+                var state = self.createState(el);
                 self.statesById[state.id] = state;
                 self.states.push(state);
-            });
-            this.initAllStates();
+               
+            }
             
-           
-
+            this.initAllStates();
             if(this.configurator.initPlayer)
                 this.configurator.initPlayer(this);
 
+        },
 
+        
+        readSelectors : function(data) {
+            if (!Array.isArray(data)) {
+                data = [data];
+            }  
+            
+            for (var i = 0; i < data.length; i++) {
+                var s = data[i];
+                if (typeof s === "string") {
+                    s = {
+                        selector: s,
+                        type: "generic"
+                    };
+                    data[i] = s;
+                }
+            }
+
+            return data;
         },
 
         notifyChange : function() {
@@ -193,6 +218,7 @@
         },
 
         createState : function(element) {
+            
             var state = new playit.state(this, element, "focusIn"); 
             return state;
         },

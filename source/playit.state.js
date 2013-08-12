@@ -5,7 +5,7 @@ playit.ids = 100;
 playit.state = function (player, element , type) {
     this.player = player;
     var el = $(element);
-
+    var selector = el.data("selector") || {};
     //auto attribute an id to the html element and state if needed.
     if (!el.attr("id")) el.attr("id", "el" + (playit.ids++));
     
@@ -13,7 +13,8 @@ playit.state = function (player, element , type) {
     
     var p = el.parents("[data-playit]");    
     
-    this.content = meta.type || "generic";
+    this.content = selector.content ||  meta.type || "generic";
+    
     this.type = type || "focusIn";
 
     this.id = el.attr("id");
@@ -48,8 +49,11 @@ playit.state = function (player, element , type) {
         flyBackward: new $.Callbacks(),
         endFlyBackward: new $.Callbacks()
     };
-
-   
+    
+    if (selector.marker && this.type == "focus") {
+        this.addMarker(this.id , selector.marker);
+    }
+    
     if (meta.marker) this.addMarker(meta.marker, {});
 };
 
