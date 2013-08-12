@@ -29,7 +29,7 @@ playit.fx.show = function (state) {
 
 playit.fx.show.prototype = {
     start: function () {
-        console.log("show:" + this.state.id);
+        //console.log("show:" + this.state.id);
         var  self = this;
         if (this.state.element) $(this.state.element).css("display", "block");
 
@@ -50,7 +50,7 @@ playit.fx.tween = function (state) {
 
 playit.fx.tween.prototype = {
     start: function () {
-        console.log("show:" + this.state.id);
+        //console.log("show:" + this.state.id);
         var self = this;
         $(this.state.element).css("display", "block");
         $(this.state.element).css("margin-left", "-500px");
@@ -78,7 +78,7 @@ playit.fx.hide = function (state) {
 };
 playit.fx.hide.prototype = {
     start: function () {
-        console.log("hide:" + this.state.id);
+        //console.log("hide:" + this.state.id);
         if (this.state.element) $(this.state.element).css("display", "none");
         this.transition.resolve();
     },
@@ -101,13 +101,14 @@ playit.fx.fadeIn = function (state) {
 
 playit.fx.fadeIn.prototype = {
     start: function () {
-        console.log("fadein:" + this.state.id);
+        //console.log("fadein:" + this.state.id);
         var self = this;
         if (!this.state.element) {
             this.transition.resolve();
             return;
         }
-        this.state.element.fadeIn(500).promise().done(function () {
+
+        this.state.element.fadeIn(250).promise().done(function () {
             self.transition.resolve();
         });
     },
@@ -130,13 +131,13 @@ playit.fx.fadeOut = function (state) {
 
 playit.fx.fadeOut.prototype = {
     start: function () {
-        console.log("fadeout:" + this.state.id);
+        //console.log("fadeout:" + this.state.id);
         var self = this;
         if (!this.state.element) {
             this.transition.resolve();
             return;
         }
-        this.state.element.fadeOut(500).promise().done(function () {
+        this.state.element.fadeOut(250).promise().done(function () {
             self.transition.resolve();
         });
     },

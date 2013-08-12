@@ -15,6 +15,7 @@
         this.markers = {};
         this._name = pluginName;
         this.states = [];
+        this.direction = "forward";
         this.statesById = {};
         this.init();
 
@@ -28,7 +29,10 @@
             var me = $(this.element);
             var self = this;
             
+        
             this.statesById[this.id] = this;
+           
+
 
             me.find(this.selector).each(function() {
                 if (!$(this).attr("data-playit")) $(this).attr("data-playit", "{}");
@@ -38,15 +42,34 @@
                 self.states.push(state);
             });
             this.initAllStates();
+            
+           
+
+            if(this.configurator.initPlayer)
+                this.configurator.initPlayer(this);
+
+
         },
 
         notifyChange : function() {
+            
             $(this.element).trigger("change", this);
         },
 
-        forward : function() {
-            if (this.running) return null;
+        on : function(eventName, cb) {
+            $(this.element).on(eventName, cb);
+        },
+
+        forward : function(force) {
             var self = this;
+            
+            if (this.running && !force || !self.currentState.nextState) return null;
+            
+            if(self.currentState.type == "focus")
+                self.currentState = self.currentState.nextState;
+            
+            self.direction = "forward";
+
             var promise = this.currentState.forward();
           
             if (promise != null) {
@@ -62,12 +85,15 @@
         },
         
 
-        backward : function() {
+        backward : function(force) {
             
             var self = this;
-            if (self.running ||!self.currentState.prevState) return null;
-
-            self.currentState = self.currentState.prevState;
+            if (self.running && !force || !self.currentState.prevState) return null;
+            
+            if(self.currentState.type == "focus")
+                self.currentState = self.currentState.prevState;
+            self.direction = "backward";
+            
             var promise = this.currentState.backward();
           
             if (promise != null) {
@@ -83,6 +109,31 @@
             return promise;
         },
         
+         flyForward : function(markerType) {
+
+             var marker;
+             
+             for (var i = this.currentState.order + 1; i < this.states.length; i++) {
+                 marker = this.states[i].markers.first("el=>el.type && el.type==value", markerType);
+                 if(marker) break;
+              }
+             
+             if(marker)
+                this.flyTo(marker.id);
+         },
+        
+         flyBackward : function(markerType) {
+              var marker;
+             var attempt = 0;
+             for (var i = this.currentState.order - 1; i >= 0; i--) {
+                 marker = this.states[i].markers.first("el=>el.type && el.type==value", markerType);
+                 if(marker) break;
+                
+             }
+             
+             if(marker)
+                this.flyTo(marker.id);
+         },
 
          flyTo : function(markerId) {
              var self = this;
@@ -99,10 +150,12 @@
                  flyChain.push(this.states[i]);
              }
 
-             var direction = o1 < o2 ? "flyForward" : "flyBackward";
+             var fct = o1 < o2 ? "flyForward" : "flyBackward";
+             self.direction = o1 < o2 ? "forward" : "backward";
              var deferred = $.Deferred();
 
              var endProcess = function() {
+                 self.currentState = flyChain[0];
                  flyChain.shift();
                  processFlyChain();
              };
@@ -110,17 +163,18 @@
              var processFlyChain = function() {
                  if (flyChain.length == 0) {
                      self.running = false;
+                     
                      deferred.resolve();
                      self.notifyChange();
                      return;
                  }
                  //last step, play a simple forward
                  if (flyChain.length == 1) {
-                     direction = "forward";
+                     fct = self.direction;
                  }
                  
                  var s = flyChain[0];
-                 var promise = s[direction]();
+                 var promise = s[fct](true);
                  if (!promise) {
                      endProcess();
                      return;
@@ -134,6 +188,9 @@
              return deferred.promise();
          },
 
+        setState : function(state) {
+            this.currentState = state;
+        },
 
         createState : function(element) {
             var state = new playit.state(this, element, "focusIn"); 
@@ -165,10 +222,18 @@
             for (i = 0; i < tmp.length; i++) {
                 this.exploreState(tmp[i]);
             }
+            
+            var firstState = self.createState($(this.element));
+            firstState.type = "focus";
+            firstState.content = "player";
+            firstState.id = self.id;
+            this.states.splice(0,0,firstState);
+
 
             for (i = 0; i < this.states.length; i++) {
                 var state = self.states[i];
-                this.configurator(state);
+                if(this.configurator.initState)
+                    this.configurator.initState(state);
                 state.order = i;
 
                 state.init();
@@ -179,24 +244,27 @@
                 if (i < self.states.length - 1) {
                     state.nextState = self.states[i + 1];
                 }
-                console.log(state.id + " " + state.type);
+                
 
+
+                //console.log(state);
             }
         },
         
-        _createOutState : function(state) {
-            var s = new playit.state(this, state.element, "focusOut"); 
-            s.id = "out" + state.id;
+        _createState : function(state, type) {
+            var s = new playit.state(this, state.element, type); 
+            s.id = type + state.id;
             this.statesById[s.id] = s;
             return s;
         },
         
         exploreState : function(state) {
             this.states.push(state);
+            this.states.push(this._createState(state, "focus"));
             for (var i = 0; i < state.items.length; i++) {
                 this.exploreState(state.items[i]);
             }
-            this.states.push(this._createOutState(state));
+            this.states.push(this._createState(state, "focusOut"));
         }
 
 

@@ -11,7 +11,7 @@ playit.defaults.slide =
         flyBackward: playit.fx.hide
     },
     focusOut: {
-        forward: playit.fx.hide,
+        forward: playit.fx.fadeOut,
         backward: playit.fx.show,
         flyForward: playit.fx.hide,
         flyBackward: playit.fx.hide
@@ -23,22 +23,27 @@ playit.defaults.list = playit.defaults.text = playit.defaults.image = playit.def
     focusIn: {
         forward: playit.fx.fadeIn,
         backward: playit.fx.hide,
-        flyForward: playit.fx.show,
+        flyForward: playit.fx.hide,
         flyBackward: playit.fx.hide
     },
     focusOut: {
         forward: playit.fx.none,
         backward: playit.fx.show,
-        flyForward: playit.fx.none,
-        flyBackward: playit.fx.show
+        flyForward: playit.fx.hide,
+        flyBackward: playit.fx.hide
     }
 };
 
 playit.defaults.configurator = function (state) {
-    if (state.type == "focusOut") {
+    if (state.type != "focus") {
         state.on("endForward", function (s) {
             if (s.nextState) {
                 s.nextState.forward();
+            }
+        });
+        state.on("endBackward", function (s) {
+            if (s.prevState) {
+                s.prevState.backward();
             }
         });
     }

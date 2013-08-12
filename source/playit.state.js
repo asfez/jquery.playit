@@ -13,19 +13,21 @@ playit.state = function (player, element , type) {
     
     var p = el.parents("[data-playit]");    
     
+    this.content = meta.type || "generic";
+    this.type = type || "focusIn";
+
     this.id = el.attr("id");
     
     this.element = el;
     this.parent =  p.length == 0 ? player : player.statesById[p.attr('id')];
     
-    this.content = meta.type || "generic";
-    this.type = type || "focusIn";
+   
     
     this.items = [];
     
     this.nextState = null;
     this.prevState = null;
-    this.markers = {};
+    this.markers = [];
     this.order = 0;
 
     this.transitions = {
@@ -47,21 +49,26 @@ playit.state = function (player, element , type) {
         endFlyBackward: new $.Callbacks()
     };
 
+   
     if (meta.marker) this.addMarker(meta.marker, {});
 };
 
 playit.state.prototype.addMarker = function(id, options) {
     var r = new playit.marker(this, id, options);
-    this.markers[id] = r;
+    this.markers.push(r);
     this.player.registerMarker(r, this);
 };
 
 playit.state.prototype.forward = function () {
     var self = this;
-    if (!self.transitions.forward) {
+    if (!self.transitions || !self.transitions.forward) {
         self.events.endForward.fire(self);
-        if(self.nextState)
+        if (self.nextState) {
             self.player.currentState = self.nextState;
+            if (self.nextState.type != "focus") {
+                self.player.forward(true);
+            }
+        }
         return null;
     };
 
@@ -70,8 +77,14 @@ playit.state.prototype.forward = function () {
     t.deferred().done(function () {
         self.currentFx = null;
         self.events.endForward.fire(self);
-        if(self.nextState)
-            self.player.currentState = self.nextState;
+        if (self.nextState) {
+            self.player.setState(self.nextState);
+             if (self.nextState.type != "focus") {
+                self.player.forward(true);
+            }
+        }
+        
+        
     });
     t.start();
     return t.deferred();
@@ -79,10 +92,14 @@ playit.state.prototype.forward = function () {
 
 playit.state.prototype.flyForward = function () {
     var self = this;
-    if (!self.transitions.flyForward) {
-        self.events.endFlyForward.fire(self);
-        if(self.nextState)
-            self.player.currentState = self.nextState;
+    if (!self.transitions || !self.transitions.flyForward) {
+         self.events.endFlyForward.fire(self);
+        if (self.nextState) {
+            self.player.setState(self.nextState);
+            
+        }
+       
+       
         return null;
     };
 
@@ -91,8 +108,10 @@ playit.state.prototype.flyForward = function () {
     t.deferred().done(function () {
         self.currentFx = null;
         self.events.endFlyForward.fire(self);
-        if(self.nextState)
-            self.player.currentState = self.nextState;
+        if (self.nextState) {
+            self.player.setState(self.nextState);
+          
+        }
     });
     t.start();
     return t.deferred();
@@ -101,10 +120,16 @@ playit.state.prototype.flyForward = function () {
 
 playit.state.prototype.backward = function () {
    var self = this;
-    if (!self.transitions.backward) {
+    if (!self.transitions || !self.transitions.backward) {
         self.events.endBackward.fire(self);
-        if(self.prevState)
-            self.player.currentState = self.prevState;
+        if (self.prevState) {
+            self.player.setState(self.prevState);
+
+            if (self.prevState.type != "focus") {
+                self.player.backward(true);
+            }
+        }
+
         return null;
     };
 
@@ -113,8 +138,14 @@ playit.state.prototype.backward = function () {
     t.deferred().done(function () {
         self.currentFx = null;
         self.events.endBackward.fire(self);
-        if(self.prevState)
-            self.player.currentState = self.prevState;
+        if (self.prevState) {
+            self.player.setState(self.prevState);
+              if (self.prevState.type != "focus") {
+                self.player.backward(true);
+            }
+        }
+       
+       
     });
     t.start();
     return t.deferred();
@@ -123,10 +154,12 @@ playit.state.prototype.backward = function () {
 
 playit.state.prototype.flyBackward = function () {
     var self = this;
-    if (!self.transitions.flyBackward) {
+    if (!self.transitions || !self.transitions.flyBackward) {
         self.events.endFlyBackward.fire(self);
-        if(self.prevState)
-            self.player.currentState = self.prevState;
+        if (self.prevState) {
+            self.player.setState(self.prevState);
+           
+        }
         return null;
     };
 
@@ -134,9 +167,12 @@ playit.state.prototype.flyBackward = function () {
     self.currentFx = t;
     t.deferred().done(function () {
         self.currentFx = null;
+          if (self.prevState) {
+            self.player.setState(self.prevState);
+             
+        }
         self.events.endFlyBackward.fire(self);
-        if(self.prevState)
-            self.player.currentState = self.prevState;
+       
     }); 
     t.start();
     return t.deferred();
@@ -151,6 +187,8 @@ playit.state.prototype.close = function () {
 };
 
 playit.state.prototype.init = function () {
+    var self = this;
+    
     this.events.init.fire(this);
 };
 
@@ -169,5 +207,6 @@ playit.marker = function(state, id, options) {
     this.player = state.player;
     this.state = state;
     this.id = id;
+    this.type = options.type;
     this.name = options.name || id;
 }
